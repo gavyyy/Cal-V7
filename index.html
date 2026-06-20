@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -409,7 +409,7 @@
             logged_quantities: quantitiesSummary.join(', ')
         };
 
-        // Download offline fallback text file backup locally
+        // Download backup file
         let logContent = `Foreman: ${dbPayload.foreman}\nCrew: ${dbPayload.crew_member}\nSetup: ${dbPayload.crew_setup}\nTotal: ${dbPayload.total_units}\nItems: ${dbPayload.logged_quantities}`;
         const blob = new Blob([logContent], { type: "text/plain;charset=utf-8" });
         const link = document.createElement("a");
@@ -419,29 +419,34 @@
         link.click();
         document.body.removeChild(link);
 
-        // UPLOAD DIRECTLY TO SUPABASE
-        if(SUPABASE_URL !== "https://zeuvoltfqanrcquxlbxa.supabase.co") {
-            const targetUrl = `${SUPABASE_URL}/rest/v1/daily_logs`;
-            
-            fetch(targetUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXZvbHRmcWFucmNxdXhsYnhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5MDQ0NjUsImV4cCI6MjA5NzQ4MDQ2NX0.wJ-YbeaK-zRlXLZOKQoKscCJ0vSC0EbKlgiQtxHTYYw": SUPABASE_ANON_KEY,
-                    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
-                },
-                body: JSON.stringify(dbPayload)
-            })
-            .then(res => {
-                if (!res.ok) throw new Error("Database transaction rejected: " + res.status);
-                alert("Log saved locally and successfully synced online to Supabase!");
-            })
-            .catch(err => {
-                alert("Saved file locally, but cloud sync failed: " + err.message);
-            });
-        } else {
-            alert("File downloaded locally. (Supabase keys are not configured inside the file script yet)");
+        if(SUPABASE_URL === "YOUR_SUPABASE_PROJECT_URL_HERE") {
+            alert("⚠️ Setup Error: You haven't replaced YOUR_SUPABASE_PROJECT_URL_HERE with your real database link yet!");
+            return;
         }
+
+        // CONNECT TO SUPABASE AND ALERT THE EXACT ERROR
+        const targetUrl = `${SUPABASE_URL}/rest/v1/daily_logs`;
+        
+        fetch(targetUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify(dbPayload)
+        })
+        .then(async (res) => {
+            if (!res.ok) {
+                const errorText = await res.text();
+                alert("❌ SUPABASE REJECTED IT!\nStatus: " + res.status + "\nReason: " + errorText);
+            } else {
+                alert("🎉 SUCCESS! Log recorded inside Supabase!");
+            }
+        })
+        .catch(err => {
+            alert("❌ CONNECTION FAILED!\nError message: " + err.message + "\n\nThis usually means your SUPABASE_URL has a typo.");
+        });
     }
 
     loadSavedData();
