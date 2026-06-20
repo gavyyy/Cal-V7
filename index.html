@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -330,7 +330,9 @@
 
         items.forEach((item, index) => {
             const savedQty = localStorage.getItem(`dom_sc_qty_${index}`);
-            if (savedQty !== null) document.getElementById(`qty-${index}`).value = savedQty;
+            if (savedQty !== null && savedQty !== "") {
+                document.getElementById(`qty-${index}`).value = savedQty;
+            }
         });
     }
 
@@ -425,8 +427,8 @@
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "apikey": SUPABASE_ANON_KEY,
-                    "Authorization": `Bearer ${eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXZvbHRmcWFucmNxdXhsYnhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5MDQ0NjUsImV4cCI6MjA5NzQ4MDQ2NX0.wJ-YbeaK-zRlXLZOKQoKscCJ0vSC0EbKlgiQtxHTYYw}`
+                    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXZvbHRmcWFucmNxdXhsYnhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5MDQ0NjUsImV4cCI6MjA5NzQ4MDQ2NX0.wJ-YbeaK-zRlXLZOKQoKscCJ0vSC0EbKlgiQtxHTYYw": SUPABASE_ANON_KEY,
+                    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
                 },
                 body: JSON.stringify(dbPayload)
             })
@@ -445,5 +447,5 @@
     loadSavedData();
     calculateEverything();
 </script>
-</body>f
+</body>
 </html>
