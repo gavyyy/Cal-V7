@@ -109,4 +109,348 @@
         }
         .item-name {
             font-weight: 600;
-            font-size: 15px
+            font-size: 15px;
+            color: #1a1a1a;
+        }
+        .item-val {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .item-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .qty-input {
+            width: 65px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .item-total {
+            width: 55px;
+            text-align: right;
+            font-weight: bold;
+            font-size: 14px;
+            color: #444;
+        }
+        .total-banner {
+            background: #222;
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 16px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .total-banner span:last-child {
+            font-size: 22px;
+            color: #4dadff;
+        }
+        .metrics-panel {
+            background: #f0f7ff;
+            border: 1px solid #cfe4ff;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .metric-item {
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e2eeff;
+            text-align: center;
+        }
+        .metric-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .metric-value {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .remaining-positive {
+            color: #dc3545;
+        }
+        .remaining-met {
+            color: #28a745;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .save-btn {
+            flex: 2;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(40,167,69,0.2);
+        }
+        .save-btn:active {
+            background-color: #1e7e34;
+        }
+        .clear-btn {
+            flex: 1;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .clear-btn:active {
+            background-color: #545b62;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>DOM/SC Norm 2026</h2>
+    
+    <div class="crew-selection">
+        <label class="crew-option">
+            <input type="radio" name="crew" value="1" id="crew-1" checked onchange="calculateEverything()"> 1 Man
+        </label>
+        <label class="crew-option">
+            <input type="radio" name="crew" value="2" id="crew-2" onchange="calculateEverything()"> 2 Man
+        </label>
+    </div>
+
+    <div class="crew-details">
+        <div class="input-group">
+            <label for="foreman-name">Foreman Name</label>
+            <input type="text" id="foreman-name" class="text-input" placeholder="Enter foreman name" oninput="saveNames()">
+        </div>
+        <div class="input-group">
+            <label for="crew-member-name">Crew Member Name(s)</label>
+            <input type="text" id="crew-member-name" class="text-input" placeholder="Enter member name(s)" oninput="saveNames()">
+        </div>
+    </div>
+
+    <div id="item-cards-container"></div>
+
+    <div class="total-banner">
+        <span>Total Units:</span>
+        <span id="grand-total">0.00</span>
+    </div>
+
+    <div class="metrics-panel">
+        <span style="font-weight: bold; color: #0056b3;">Target Metrics Status</span>
+        <div class="metrics-grid">
+            <div class="metric-item">
+                <div class="metric-label">8-Hr Target (<span id="target-8-val">26</span>)</div>
+                <div class="metric-value" id="rem-8hr">26.00 left</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-label">10-Hr Target (<span id="target-10-val">32.5</span>)</div>
+                <div class="metric-value" id="rem-10hr">32.50 left</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="clear-btn" onclick="clearForm()">🧹 Clear</button>
+        <button class="save-btn" onclick="saveDailyLog()">💾 Save & Submit Log</button>
+    </div>
+</div>
+
+<script>
+    // YOUR SUPABASE CONFIGURATION - FIXED AND INJECTED
+    const SUPABASE_URL = "https://hjpbjpxbleivkegsejks.supabase.co"; 
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqcGJqcHhibGVpdmtlZ3NlamtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5MDk5NjksImV4cCI6MjA5NzQ4NTk2OX0.VJQInKyyKV2sfBxJXV-0TpPEeIVsVBG4kxN6weAq6vc";
+
+    const items = [
+        { name: "Visual", val: 0.30 },
+        { name: "Fume per rod", val: 0.18 },
+        { name: "Ground wire", val: 0.55 },
+        { name: "Guy marker", val: 0.17 },
+        { name: "Pole number", val: 0.14 },
+        { name: "Riser ground", val: 0.44 },
+        { name: "U guard", val: 0.46 },
+        { name: "Pad mount", val: 0.27 },
+        { name: "Warning sticker", val: 0.02 }
+    ];
+
+    const container = document.getElementById('item-cards-container');
+    items.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.innerHTML = `
+            <div class="item-info">
+                <div class="item-name">${item.name}</div>
+                <div class="item-val">Unit Value: ${item.val.toFixed(2)}</div>
+            </div>
+            <div class="item-actions">
+                <input type="number" class="qty-input" id="qty-${index}" min="0" pattern="[0-9]*" placeholder="0" oninput="calculateEverything()">
+                <div class="item-total" id="total-${index}">0.00</div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+
+    let currentGrandTotal = 0;
+    let currentActiveCrew = "1 Man";
+
+    function saveNames() {
+        localStorage.setItem('dom_sc_foreman', document.getElementById('foreman-name').value);
+        localStorage.setItem('dom_sc_member', document.getElementById('crew-member-name').value);
+    }
+
+    function loadSavedData() {
+        const savedCrew = localStorage.getItem('dom_sc_crew');
+        if (savedCrew === "2") { document.getElementById('crew-2').checked = true; } 
+        else { document.getElementById('crew-1').checked = true; }
+
+        document.getElementById('foreman-name').value = localStorage.getItem('dom_sc_foreman') || "";
+        document.getElementById('crew-member-name').value = localStorage.getItem('dom_sc_member') || "";
+
+        items.forEach((item, index) => {
+            const savedQty = localStorage.getItem(`dom_sc_qty_${index}`);
+            if (savedQty !== null && savedQty !== "") {
+                document.getElementById(`qty-${index}`).value = savedQty;
+            }
+        });
+    }
+
+    function calculateEverything() {
+        currentGrandTotal = 0;
+        const checkedCrewInput = document.querySelector('input[name="crew"]:checked');
+        const crewValue = checkedCrewInput ? checkedCrewInput.value : "1";
+        localStorage.setItem('dom_sc_crew', crewValue);
+
+        items.forEach((item, index) => {
+            const qtyElement = document.getElementById(`qty-${index}`);
+            const qtyStr = qtyElement.value;
+            localStorage.setItem(`dom_sc_qty_${index}`, qtyStr);
+            const qty = parseInt(qtyStr) || 0;
+            const lineTotal = qty * item.val;
+            currentGrandTotal += lineTotal;
+            document.getElementById(`total-${index}`).innerText = lineTotal.toFixed(2);
+        });
+
+        document.getElementById('grand-total').innerText = currentGrandTotal.toFixed(2);
+        const isOneMan = crewValue === "1";
+        currentActiveCrew = isOneMan ? "1 Man" : "2 Man";
+        
+        let target8 = isOneMan ? 26 : 31;
+        let target10 = isOneMan ? 32.5 : 39;
+        document.getElementById('target-8-val').innerText = target8;
+        document.getElementById('target-10-val').innerText = target10;
+        updateRemainingDisplay('rem-8hr', target8 - currentGrandTotal);
+        updateRemainingDisplay('rem-10hr', target10 - currentGrandTotal);
+    }
+
+    function updateRemainingDisplay(elementId, value) {
+        const el = document.getElementById(elementId);
+        if (value <= 0) {
+            el.innerText = `✅ MET (+${Math.abs(value).toFixed(2)})`;
+            el.className = "metric-value remaining-met";
+        } else {
+            el.innerText = `⏳ ${value.toFixed(2)} left`;
+            el.className = "metric-value remaining-positive";
+        }
+    }
+
+    function clearForm() {
+        if (confirm("Are you sure you want to clear entries?")) {
+            localStorage.removeItem('dom_sc_foreman');
+            localStorage.removeItem('dom_sc_member');
+            document.getElementById('foreman-name').value = "";
+            document.getElementById('crew-member-name').value = "";
+            items.forEach((_, index) => {
+                localStorage.removeItem(`dom_sc_qty_${index}`);
+                document.getElementById(`qty-${index}`).value = "";
+            });
+            calculateEverything();
+        }
+    }
+
+    function saveDailyLog() {
+        const foremanName = document.getElementById('foreman-name').value || "Not Entered";
+        const crewMemberName = document.getElementById('crew-member-name').value || "Not Entered";
+
+        let quantitiesSummary = [];
+        items.forEach((item, index) => {
+            const qty = parseInt(document.getElementById(`qty-${index}`).value) || 0;
+            if (qty > 0) {
+                quantitiesSummary.push(`${item.name}: ${qty}`);
+            }
+        });
+
+        const dbPayload = {
+            foreman: foremanName,
+            crew_member: crewMemberName,
+            crew_setup: currentActiveCrew,
+            total_units: currentGrandTotal.toFixed(2),
+            logged_quantities: quantitiesSummary.join(', ')
+        };
+
+        // Download backup file
+        let logContent = `Foreman: ${dbPayload.foreman}\nCrew: ${dbPayload.crew_member}\nSetup: ${dbPayload.crew_setup}\nTotal: ${dbPayload.total_units}\nItems: ${dbPayload.logged_quantities}`;
+        const blob = new Blob([logContent], { type: "text/plain;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Backup_Log.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        if(SUPABASE_URL === "YOUR_SUPABASE_PROJECT_URL_HERE") {
+            alert("⚠️ Setup Error: API keys are not ready.");
+            return;
+        }
+
+        // CONNECT TO SUPABASE AND ALERT THE EXACT RESULT
+        const targetUrl = `${SUPABASE_URL}/rest/v1/daily_logs`;
+        
+        fetch(targetUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify(dbPayload)
+        })
+        .then(async (res) => {
+            if (!res.ok) {
+                const errorText = await res.text();
+                alert("❌ SUPABASE REJECTED IT!\nStatus: " + res.status + "\nReason: " + errorText);
+            } else {
+                alert("🎉 SUCCESS! Log recorded inside Supabase!");
+            }
+        })
+        .catch(err => {
+            alert("❌ CONNECTION FAILED!\nError message: " + err.message);
+        });
+    }
+
+    loadSavedData();
+    calculateEverything();
+</script>
+</body>
+</html>
