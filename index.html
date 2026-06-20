@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DOM/SC Norm 2026</title>
+    <title>DOM/SC Norm Calculator</title>
     <style>
         * {
             box-sizing: border-box;
@@ -16,21 +16,21 @@
             margin: 0;
             padding: 12px;
         }
+
+        /* --- Calculator Layout Elements --- */
         .container {
             max-width: 500px;
-            margin: 0 auto;
+            margin: 20px auto;
             background: #ffffff;
             padding: 16px;
             border-radius: 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
         h2 {
-            margin: 4px 0 12px 0;
-            font-size: 22px;
+            margin: 0 0 16px 0;
+            font-size: 24px;
             color: #111;
             text-align: center;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 8px;
         }
         .crew-selection {
             display: flex;
@@ -87,7 +87,7 @@
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 8px;
-            font-size: 16px; /* Prevents zoom on iOS */
+            font-size: 16px;
             background: #fff;
         }
         .text-input:focus {
@@ -274,11 +274,15 @@
 
     <div class="action-buttons">
         <button class="clear-btn" onclick="clearForm()">🧹 Clear</button>
-        <button class="save-btn" onclick="saveDailyLog()">💾 Save Daily Log File</button>
+        <button class="save-btn" onclick="saveDailyLog()">💾 Save & Submit Log</button>
     </div>
 </div>
 
 <script>
+    // FILL IN YOUR SUPABASE CONFIGURATION HERE
+    const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL_HERE"; 
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
+
     const items = [
         { name: "Visual", val: 0.30 },
         { name: "Fume per rod", val: 0.18 },
@@ -291,7 +295,6 @@
         { name: "Warning sticker", val: 0.02 }
     ];
 
-    // Build DOM structure
     const container = document.getElementById('item-cards-container');
     items.forEach((item, index) => {
         const card = document.createElement('div');
@@ -312,47 +315,35 @@
     let currentGrandTotal = 0;
     let currentActiveCrew = "1 Man";
 
-    // Separate saving function for names to minimize loop footprint
     function saveNames() {
         localStorage.setItem('dom_sc_foreman', document.getElementById('foreman-name').value);
         localStorage.setItem('dom_sc_member', document.getElementById('crew-member-name').value);
     }
 
-    // Load saved data out of localStorage on page initialization
     function loadSavedData() {
         const savedCrew = localStorage.getItem('dom_sc_crew');
-        if (savedCrew === "2") {
-            document.getElementById('crew-2').checked = true;
-        } else {
-            document.getElementById('crew-1').checked = true;
-        }
+        if (savedCrew === "2") { document.getElementById('crew-2').checked = true; } 
+        else { document.getElementById('crew-1').checked = true; }
 
-        // Restore foreman and crew member strings
         document.getElementById('foreman-name').value = localStorage.getItem('dom_sc_foreman') || "";
         document.getElementById('crew-member-name').value = localStorage.getItem('dom_sc_member') || "";
 
         items.forEach((item, index) => {
             const savedQty = localStorage.getItem(`dom_sc_qty_${index}`);
-            if (savedQty !== null) {
-                document.getElementById(`qty-${index}`).value = savedQty;
-            }
+            if (savedQty !== null) document.getElementById(`qty-${index}`).value = savedQty;
         });
     }
 
     function calculateEverything() {
         currentGrandTotal = 0;
-        
         const checkedCrewInput = document.querySelector('input[name="crew"]:checked');
         const crewValue = checkedCrewInput ? checkedCrewInput.value : "1";
-        
         localStorage.setItem('dom_sc_crew', crewValue);
 
         items.forEach((item, index) => {
             const qtyElement = document.getElementById(`qty-${index}`);
             const qtyStr = qtyElement.value;
-            
             localStorage.setItem(`dom_sc_qty_${index}`, qtyStr);
-
             const qty = parseInt(qtyStr) || 0;
             const lineTotal = qty * item.val;
             currentGrandTotal += lineTotal;
@@ -360,16 +351,13 @@
         });
 
         document.getElementById('grand-total').innerText = currentGrandTotal.toFixed(2);
-
         const isOneMan = crewValue === "1";
         currentActiveCrew = isOneMan ? "1 Man" : "2 Man";
         
         let target8 = isOneMan ? 26 : 31;
         let target10 = isOneMan ? 32.5 : 39;
-
         document.getElementById('target-8-val').innerText = target8;
         document.getElementById('target-10-val').innerText = target10;
-
         updateRemainingDisplay('rem-8hr', target8 - currentGrandTotal);
         updateRemainingDisplay('rem-10hr', target10 - currentGrandTotal);
     }
@@ -386,12 +374,11 @@
     }
 
     function clearForm() {
-        if (confirm("Are you sure you want to clear all current quantities and names for a new log?")) {
+        if (confirm("Are you sure you want to clear entries?")) {
             localStorage.removeItem('dom_sc_foreman');
             localStorage.removeItem('dom_sc_member');
             document.getElementById('foreman-name').value = "";
             document.getElementById('crew-member-name').value = "";
-
             items.forEach((_, index) => {
                 localStorage.removeItem(`dom_sc_qty_${index}`);
                 document.getElementById(`qty-${index}`).value = "";
@@ -401,43 +388,62 @@
     }
 
     function saveDailyLog() {
-        const now = new Date();
-        const dateStr = now.toLocaleDateString();
-        const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        const fileDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-
         const foremanName = document.getElementById('foreman-name').value || "Not Entered";
         const crewMemberName = document.getElementById('crew-member-name').value || "Not Entered";
 
-        let logContent = `====================================\n   DOM/SC NORM DAILY LOG REPORT\n====================================\nDate: ${dateStr}\nTime: ${timeStr}\nForeman: ${foremanName}\nCrew Member: ${crewMemberName}\nCrew Setup: ${currentActiveCrew} Crew\n------------------------------------\n\nLOGGED QUANTITIES:\n`;
-
+        let quantitiesSummary = [];
         items.forEach((item, index) => {
             const qty = parseInt(document.getElementById(`qty-${index}`).value) || 0;
             if (qty > 0) {
-                logContent += `• ${item.name.padEnd(16)} : Qty ${qty.toString().padEnd(4)} -> Value: ${(qty * item.val).toFixed(2)} units\n`;
+                quantitiesSummary.push(`${item.name}: ${qty}`);
             }
         });
 
-        let isOneMan = currentActiveCrew === "1 Man";
-        let target8 = isOneMan ? 26 : 31;
-        let target10 = isOneMan ? 32.5 : 39;
-        let s8 = (target8 - currentGrandTotal) <= 0 ? `MET (+${Math.abs(target8 - currentGrandTotal).toFixed(2)} OVER)` : `${(target8 - currentGrandTotal).toFixed(2)} remaining`;
-        let s10 = (target10 - currentGrandTotal) <= 0 ? `MET (+${Math.abs(target10 - currentGrandTotal).toFixed(2)} OVER)` : `${(target10 - currentGrandTotal).toFixed(2)} remaining`;
+        const dbPayload = {
+            foreman: foremanName,
+            crew_member: crewMemberName,
+            crew_setup: currentActiveCrew,
+            total_units: currentGrandTotal.toFixed(2),
+            logged_quantities: quantitiesSummary.join(', ')
+        };
 
-        logContent += `\n------------------------------------\nTOTAL PRODUCTION UNITS: ${currentGrandTotal.toFixed(2)}\n------------------------------------\n8-Hr Goal (${target8}): ${s8}\n10-Hr Goal (${target10}): ${s10}\n====================================`;
-
+        // Download offline fallback text file backup locally
+        let logContent = `Foreman: ${dbPayload.foreman}\nCrew: ${dbPayload.crew_member}\nSetup: ${dbPayload.crew_setup}\nTotal: ${dbPayload.total_units}\nItems: ${dbPayload.logged_quantities}`;
         const blob = new Blob([logContent], { type: "text/plain;charset=utf-8" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `DOM_SC_Log_${fileDate}.txt`;
+        link.download = `Backup_Log.txt`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        // UPLOAD DIRECTLY TO SUPABASE
+        if(SUPABASE_URL !== "https://zeuvoltfqanrcquxlbxa.supabase.co") {
+            const targetUrl = `${SUPABASE_URL}/rest/v1/daily_logs`;
+            
+            fetch(targetUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "apikey": SUPABASE_ANON_KEY,
+                    "Authorization": `Bearer ${eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpldXZvbHRmcWFucmNxdXhsYnhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5MDQ0NjUsImV4cCI6MjA5NzQ4MDQ2NX0.wJ-YbeaK-zRlXLZOKQoKscCJ0vSC0EbKlgiQtxHTYYw}`
+                },
+                body: JSON.stringify(dbPayload)
+            })
+            .then(res => {
+                if (!res.ok) throw new Error("Database transaction rejected: " + res.status);
+                alert("Log saved locally and successfully synced online to Supabase!");
+            })
+            .catch(err => {
+                alert("Saved file locally, but cloud sync failed: " + err.message);
+            });
+        } else {
+            alert("File downloaded locally. (Supabase keys are not configured inside the file script yet)");
+        }
     }
 
-    // Run setup pipeline
     loadSavedData();
     calculateEverything();
 </script>
-</body>
+</body>f
 </html>
